@@ -21,14 +21,32 @@ jobs:
         distribution: 'temurin'
         java-version: '17'
 
+    - name: Restore Debug Keystore
+      run: |
+        if [ -f debug.keystore.base64 ]; then
+          echo "Decoding debug.keystore from base64..."
+          base64 -d debug.keystore.base64 > debug.keystore
+        elif [ ! -f debug.keystore ]; then
+          echo "Generating fallback debug.keystore..."
+          keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+        fi
+
+    - name: Setup environment files
+      run: |
+        if [ -f .env.example ] && [ ! -f .env ]; then
+          cp .env.example .env
+        elif [ ! -f .env ]; then
+          touch .env
+        fi
+
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v4
 
-    - name: Grant execute permission for gradlew (if present)
-      run: chmod +x gradlew || true
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
 
     - name: Build with Gradle
-      run: ./gradlew assembleDebug --stacktrace || gradle assembleDebug --stacktrace
+      run: ./gradlew assembleDebug --stacktrace --no-daemon
 
     - name: Upload Debug APK
       uses: actions/upload-artifact@v4
