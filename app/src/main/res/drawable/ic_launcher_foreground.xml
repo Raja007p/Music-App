@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Centered within 66dp safe zone (canvas is 108dp, center is 54, 54) -->
+    <!-- Musical note stem and flag -->
+    <path
+        android:pathData="M61,32 L61,64 C58.5,62.8 55.4,62 52,62 C44.8,62 39,66.5 39,72 C39,77.5 44.8,82 52,82 C59.2,82 65,77.5 65,72 L65,42 L77,37 L77,30 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="39"
+                android:startY="30"
+                android:endX="77"
+                android:endY="82"
+                android:type="linear">
+                <item android:offset="0.0" android:color="#A855F7" />
+                <item android:offset="0.6" android:color="#7C3AED" />
+                <item android:offset="1.0" android:color="#06B6D4" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <!-- Dynamic audio frequency waves on the side -->
+    <path
+        android:pathData="M31,67 L31,77"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="31"
+                android:startY="67"
+                android:endX="31"
+                android:endY="77"
+                android:type="linear">
+                <item android:offset="0.0" android:color="#EC4899" />
+                <item android:offset="1.0" android:color="#8B5CF6" />
+            </gradient>
+        </aapt:attr>
+        <aapt:attr name="android:strokeColor">
+            <gradient
+                android:startX="31"
+                android:startY="67"
+                android:endX="31"
+                android:endY="77"
+                android:type="linear">
+                <item android:offset="0.0" android:color="#EC4899" />
+                <item android:offset="1.0" android:color="#8B5CF6" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path
+        android:pathData="M25,70 L25,74"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round"
+        android:strokeColor="#8B5CF6" />
+    <path
+        android:pathData="M81,46 L81,56"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round"
+        android:strokeColor="#06B6D4" />
+    <path
+        android:pathData="M87,49 L87,53"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round"
+        android:strokeColor="#3B82F6" />
+</vector>
