@@ -1,7 +1,9 @@
 package com.example.playback
 
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.os.CountDownTimer
 import android.util.Log
 import androidx.media3.common.AudioAttributes
@@ -23,6 +25,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 enum class RepeatMode {
     OFF, ALL, ONE
@@ -32,6 +35,7 @@ class TuneFlowPlayerManager(private val context: Context) {
     private val scope = CoroutineScope(Dispatchers.Main + Job())
     private val database = TuneFlowDatabase.getDatabase(context)
     private val songDao: SongDao = database.songDao()
+    private val prefs = context.getSharedPreferences("tuneflow_playback_prefs", Context.MODE_PRIVATE)
 
     val effectsManager = AudioEffectsManager(context)
 
@@ -89,8 +93,10 @@ class TuneFlowPlayerManager(private val context: Context) {
                 _isPlaying.value = playing
                 if (playing) {
                     startProgressTracking()
+                    startMediaService()
                 } else {
                     stopProgressTracking()
+                    savePlaybackState()
                 }
             }
 
@@ -110,16 +116,76 @@ class TuneFlowPlayerManager(private val context: Context) {
                 }
             }
         })
+
+        // Restore last playback state
+        restoreLastPlayback()
+    }
+
+    private fun startMediaService() {
+        try {
+            val intent = Intent(context, TuneFlowMediaService::class.java)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(intent)
+            } else {
+                context.startService(intent)
+            }
+        } catch (e: Exception) {
+            Log.e("TuneFlowPlayer", "Failed to start MediaService", e)
+        }
+    }
+
+    private fun savePlaybackState() {
+        val song = _currentSong.value ?: return
+        prefs.edit()
+            .putLong("last_song_id", song.id)
+            .putLong("last_position_ms", player.currentPosition)
+            .apply()
+    }
+
+    fun restoreLastPlayback() {
+        scope.launch(Dispatchers.IO) {
+            val lastSongId = prefs.getLong("last_song_id", -1L)
+            val lastPos = prefs.getLong("last_position_ms", 0L)
+            if (lastSongId != -1L) {
+                val songEntity = songDao.getSongById(lastSongId)
+                if (songEntity != null && !songEntity.mediaId.startsWith("demo_")) {
+                    withContext(Dispatchers.Main) {
+                        val song = songEntity.toSong()
+                        _currentSong.value = song
+                        _queue.value = listOf(song)
+                        _currentIndex.value = 0
+                        _playbackPosition.value = lastPos
+                        _duration.value = song.durationMs
+
+                        try {
+                            val mediaItem = createMediaItem(song)
+                            player.setMediaItem(mediaItem)
+                            player.prepare()
+                            player.seekTo(lastPos)
+                        } catch (e: Exception) {
+                            Log.e("TuneFlowPlayer", "Error preparing restored track", e)
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private fun startProgressTracking() {
         progressJob?.cancel()
         progressJob = scope.launch {
+            var counter = 0
             while (isActive) {
                 if (player.isPlaying) {
                     _playbackPosition.value = player.currentPosition
                     val d = player.duration
                     if (d > 0) _duration.value = d
+
+                    // Save state every ~5 seconds
+                    counter++
+                    if (counter % 12 == 0) {
+                        savePlaybackState()
+                    }
                 }
                 delay(400)
             }
@@ -149,10 +215,12 @@ class TuneFlowPlayerManager(private val context: Context) {
             player.prepare()
             player.play()
             _isPlaying.value = true
+            startMediaService()
 
-            // Record playback in DB
+            // Record playback in DB history
             scope.launch(Dispatchers.IO) {
-                songDao.recordPlay(song.id)
+                songDao.recordPlay(song.id, System.currentTimeMillis())
+                savePlaybackState()
             }
         } catch (e: Exception) {
             Log.e("TuneFlowPlayer", "Error playing song: ${song.title}", e)
@@ -160,12 +228,7 @@ class TuneFlowPlayerManager(private val context: Context) {
     }
 
     private fun createMediaItem(song: Song): MediaItem {
-        val uri = if (song.uri.startsWith("asset://")) {
-            Uri.parse("android.resource://${context.packageName}/raw/demo_audio")
-        } else {
-            Uri.parse(song.uri)
-        }
-
+        val uri = Uri.parse(song.uri)
         return MediaItem.Builder()
             .setUri(uri)
             .setMediaId(song.id.toString())
@@ -183,16 +246,19 @@ class TuneFlowPlayerManager(private val context: Context) {
     fun togglePlayPause() {
         if (player.isPlaying) {
             player.pause()
+            savePlaybackState()
         } else {
             if (player.playbackState == Player.STATE_ENDED) {
                 player.seekTo(0)
             }
             player.play()
+            startMediaService()
         }
     }
 
     fun pause() {
         player.pause()
+        savePlaybackState()
     }
 
     fun next() {
@@ -211,7 +277,6 @@ class TuneFlowPlayerManager(private val context: Context) {
     fun previous() {
         val q = _queue.value
         if (q.isEmpty()) return
-        // If played more than 3 seconds, restart current track
         if (player.currentPosition > 3000) {
             player.seekTo(0)
             return
@@ -225,6 +290,7 @@ class TuneFlowPlayerManager(private val context: Context) {
     fun seekTo(positionMs: Long) {
         player.seekTo(positionMs)
         _playbackPosition.value = positionMs
+        savePlaybackState()
     }
 
     fun toggleShuffle() {
@@ -261,6 +327,7 @@ class TuneFlowPlayerManager(private val context: Context) {
                 } else {
                     player.pause()
                     player.seekTo(0)
+                    savePlaybackState()
                 }
             }
         }

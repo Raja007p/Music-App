@@ -403,20 +403,51 @@ fun PlaylistDetailScreen(
                 }
             }
 
-            // Songs list
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(songs, key = { it.id }) { song ->
-                    SongListItem(
-                        song = song,
-                        onClick = { onSongClick(song, songs) },
-                        onPlayNext = {},
-                        onAddToQueue = {},
-                        onToggleFavorite = {}
-                    )
+            // Songs list or empty state
+            if (songs.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            imageVector = Icons.Default.QueueMusic,
+                            contentDescription = null,
+                            tint = TextMuted,
+                            modifier = Modifier.size(48.dp)
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = "Playlist is Empty",
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = TextWhite
+                            )
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Add songs to this playlist from the Music Library.",
+                            style = MaterialTheme.typography.bodySmall.copy(color = TextMuted)
+                        )
+                    }
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(songs, key = { it.id }) { song ->
+                        SongListItem(
+                            song = song,
+                            onClick = { onSongClick(song, songs) },
+                            onPlayNext = {},
+                            onAddToQueue = {},
+                            onToggleFavorite = {}
+                        )
+                    }
                 }
             }
         }

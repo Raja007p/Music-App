@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import coil.request.videoFrameMillis
 import com.example.ui.theme.DarkBorder
 import com.example.ui.theme.DarkSurfaceElevated
 import com.example.ui.theme.TextMuted
@@ -65,6 +66,7 @@ fun ArtworkImage(
             AsyncImage(
                 model = ImageRequest.Builder(LocalContext.current)
                     .data(uri)
+                    .videoFrameMillis(1000)
                     .crossfade(true)
                     .build(),
                 contentDescription = "Artwork",

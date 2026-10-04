@@ -3,10 +3,8 @@ package com.example.ui.screens.video
 import android.app.Activity
 import android.app.PictureInPictureParams
 import android.content.Context
-import android.content.pm.ActivityInfo
 import android.media.AudioManager
 import android.os.Build
-import android.provider.Settings
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.annotation.OptIn
@@ -33,40 +31,36 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AspectRatio
-import androidx.compose.material.icons.filled.BrightnessMedium
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Forward10
-import androidx.compose.material.icons.filled.Fullscreen
-import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PictureInPictureAlt
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Replay10
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.filled.ViewList
-import androidx.compose.material.icons.filled.VolumeUp
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRowDefaults
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
@@ -87,6 +81,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -100,21 +95,22 @@ import androidx.media3.ui.PlayerView
 import com.example.data.model.Video
 import com.example.ui.components.ArtworkImage
 import com.example.ui.components.formatDuration
-import com.example.ui.theme.DarkBackground
 import com.example.ui.theme.DarkBorder
 import com.example.ui.theme.DarkSurfaceElevated
 import com.example.ui.theme.PurpleBlueGradient
 import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextWhite
+import com.example.ui.theme.VideoLayout
 import kotlinx.coroutines.delay
 
 @Composable
 fun VideoLibraryScreen(
     videos: List<Video>,
-    onVideoClick: (Video) -> Unit
+    layout: VideoLayout = VideoLayout.CINEMA_CARDS,
+    onVideoClick: (Video) -> Unit,
+    onRescan: () -> Unit = {}
 ) {
     var searchQuery by remember { mutableStateOf("") }
-    var isGridView by remember { mutableStateOf(true) }
     var selectedTab by remember { mutableStateOf(0) } // 0: Videos, 1: Folders
 
     val filteredVideos = remember(videos, searchQuery) {
@@ -144,10 +140,10 @@ fun VideoLibraryScreen(
                 )
             )
 
-            IconButton(onClick = { isGridView = !isGridView }) {
+            IconButton(onClick = onRescan) {
                 Icon(
-                    imageVector = if (isGridView) Icons.Default.ViewList else Icons.Default.GridView,
-                    contentDescription = "Toggle View",
+                    imageVector = Icons.Default.Refresh,
+                    contentDescription = "Refresh Videos",
                     tint = TextWhite
                 )
             }
@@ -168,7 +164,7 @@ fun VideoLibraryScreen(
                     .padding(horizontal = 20.dp, vertical = 8.dp)
             ) {
                 Text(
-                    text = "Videos",
+                    text = "Videos (${videos.size})",
                     fontWeight = FontWeight.SemiBold,
                     color = if (selectedTab == 0) Color.White else TextMuted,
                     fontSize = 13.sp
@@ -182,8 +178,9 @@ fun VideoLibraryScreen(
                     .clickable { selectedTab = 1 }
                     .padding(horizontal = 20.dp, vertical = 8.dp)
             ) {
+                val folderCount = videos.map { it.folderName }.distinct().size
                 Text(
-                    text = "Folders",
+                    text = "Folders ($folderCount)",
                     fontWeight = FontWeight.SemiBold,
                     color = if (selectedTab == 1) Color.White else TextMuted,
                     fontSize = 13.sp
@@ -245,29 +242,172 @@ fun VideoLibraryScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Grid or List
-        if (isGridView) {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(14.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+        // Empty state when no videos found
+        if (videos.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(32.dp),
+                contentAlignment = Alignment.Center
             ) {
-                items(filteredVideos, key = { it.id }) { video ->
-                    VideoCard(video = video, onClick = { onVideoClick(video) })
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(72.dp)
+                            .clip(CircleShape)
+                            .background(DarkSurfaceElevated)
+                            .border(1.dp, DarkBorder, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Videocam,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(36.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "No Videos Found",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = TextWhite
+                        )
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "No local video files were detected on your device. Place videos in your Movies or DCIM folder.",
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            color = TextMuted,
+                            textAlign = TextAlign.Center
+                        )
+                    )
+                    Spacer(modifier = Modifier.height(20.dp))
+                    Button(
+                        onClick = onRescan,
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Scan Device Videos")
+                    }
                 }
             }
         } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                items(filteredVideos, key = { it.id }) { video ->
-                    VideoListRow(video = video, onClick = { onVideoClick(video) })
+            when (layout) {
+                VideoLayout.CINEMA_CARDS -> {
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(2),
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        items(filteredVideos, key = { it.id }) { video ->
+                            VideoCard(video = video, onClick = { onVideoClick(video) })
+                        }
+                    }
+                }
+
+                VideoLayout.COMPACT_LIST -> {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        items(filteredVideos, key = { it.id }) { video ->
+                            VideoListRow(video = video, onClick = { onVideoClick(video) })
+                        }
+                    }
+                }
+
+                VideoLayout.BENTO_GRID -> {
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(2),
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        itemsIndexed(filteredVideos, key = { _, v -> v.id }, span = { index, _ ->
+                            if (index % 3 == 0) GridItemSpan(2) else GridItemSpan(1)
+                        }) { index, video ->
+                            if (index % 3 == 0) {
+                                FeaturedVideoCard(video = video, onClick = { onVideoClick(video) })
+                            } else {
+                                VideoCard(video = video, onClick = { onVideoClick(video) })
+                            }
+                        }
+                    }
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun FeaturedVideoCard(
+    video: Video,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(180.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(DarkSurfaceElevated)
+            .border(1.dp, DarkBorder, RoundedCornerShape(18.dp))
+            .clickable { onClick() }
+    ) {
+        ArtworkImage(
+            uri = video.thumbnailUri,
+            modifier = Modifier.fillMaxSize(),
+            cornerRadius = 18.dp,
+            fallbackIcon = Icons.Default.Videocam
+        )
+        // Dark gradient overlay
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        listOf(Color.Transparent, Color(0xCC090C15))
+                    )
+                )
+        )
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(14.dp)
+        ) {
+            Text(
+                text = video.title,
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                ),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = "${formatDuration(video.durationMs)} • ${video.folderName}",
+                style = MaterialTheme.typography.bodySmall.copy(color = TextMuted)
+            )
+        }
+        Box(
+            modifier = Modifier
+                .align(Alignment.Center)
+                .size(48.dp)
+                .clip(CircleShape)
+                .background(PurpleBlueGradient),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(Icons.Default.PlayArrow, contentDescription = null, tint = Color.White, modifier = Modifier.size(28.dp))
         }
     }
 }
@@ -293,7 +433,8 @@ fun VideoCard(
             ArtworkImage(
                 uri = video.thumbnailUri,
                 modifier = Modifier.fillMaxSize(),
-                cornerRadius = 0.dp
+                cornerRadius = 0.dp,
+                fallbackIcon = Icons.Default.Videocam
             )
 
             // Duration Pill
@@ -326,7 +467,7 @@ fun VideoCard(
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
-                text = "${video.resolution} • ${video.folderName}",
+                text = video.folderName,
                 style = MaterialTheme.typography.bodySmall.copy(
                     color = TextMuted,
                     fontSize = 11.sp
@@ -360,7 +501,8 @@ fun VideoListRow(
             ArtworkImage(
                 uri = video.thumbnailUri,
                 modifier = Modifier.fillMaxSize(),
-                cornerRadius = 8.dp
+                cornerRadius = 8.dp,
+                fallbackIcon = Icons.Default.Videocam
             )
             Box(
                 modifier = Modifier
@@ -392,7 +534,7 @@ fun VideoListRow(
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "${video.resolution} • ${video.folderName}",
+                text = "${formatDuration(video.durationMs)} • ${video.folderName}",
                 style = MaterialTheme.typography.bodySmall.copy(
                     color = TextMuted,
                     fontSize = 12.sp
@@ -406,6 +548,7 @@ fun VideoListRow(
 @Composable
 fun FullscreenVideoPlayer(
     video: Video,
+    onSavePosition: (Long, Long) -> Unit = { _, _ -> },
     onClose: () -> Unit
 ) {
     val context = LocalContext.current
@@ -417,6 +560,7 @@ fun FullscreenVideoPlayer(
     var totalDurationMs by remember { mutableLongStateOf(video.durationMs) }
     var showControls by remember { mutableStateOf(true) }
     var isLocked by remember { mutableStateOf(false) }
+    var backgroundPlayEnabled by remember { mutableStateOf(false) }
     var resizeMode by remember { mutableStateOf(AspectRatioFrameLayout.RESIZE_MODE_FIT) }
 
     // Gesture status overlays (Brightness/Volume indicator)
@@ -426,10 +570,17 @@ fun FullscreenVideoPlayer(
         ExoPlayer.Builder(context).build().apply {
             setMediaItem(MediaItem.fromUri(video.uri))
             prepare()
-            if (video.lastPositionMs > 0) {
+            if (video.lastPositionMs > 4000L) {
                 seekTo(video.lastPositionMs)
             }
             playWhenReady = true
+        }
+    }
+
+    // Indicator when resumed
+    LaunchedEffect(video.lastPositionMs) {
+        if (video.lastPositionMs > 4000L) {
+            gestureStatusText = "Resumed from ${formatDuration(video.lastPositionMs)}"
         }
     }
 
@@ -442,6 +593,7 @@ fun FullscreenVideoPlayer(
         exoPlayer.addListener(listener)
         onDispose {
             exoPlayer.removeListener(listener)
+            onSavePosition(video.id, exoPlayer.currentPosition)
             exoPlayer.release()
         }
     }
@@ -499,7 +651,6 @@ fun FullscreenVideoPlayer(
                             audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, newVol, 0)
                             gestureStatusText = "Volume: ${(newVol * 100) / maxVol}%"
                         } else {
-                            // Brightness
                             gestureStatusText = "Brightness adjusted"
                         }
                     }
@@ -527,14 +678,14 @@ fun FullscreenVideoPlayer(
         // Gesture Status Indicator Overlay
         if (gestureStatusText != null) {
             LaunchedEffect(gestureStatusText) {
-                delay(1200)
+                delay(1500)
                 gestureStatusText = null
             }
             Box(
                 modifier = Modifier
                     .align(Alignment.Center)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(Color.Black.copy(alpha = 0.75f))
+                    .background(Color.Black.copy(alpha = 0.8f))
                     .padding(horizontal = 20.dp, vertical = 10.dp)
             ) {
                 Text(
@@ -568,7 +719,10 @@ fun FullscreenVideoPlayer(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = onClose) {
+                        IconButton(onClick = {
+                            onSavePosition(video.id, currentPositionMs)
+                            onClose()
+                        }) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = "Back",
@@ -589,6 +743,18 @@ fun FullscreenVideoPlayer(
                     }
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
+                        // Background Audio Play Toggle
+                        IconButton(onClick = {
+                            backgroundPlayEnabled = !backgroundPlayEnabled
+                            gestureStatusText = if (backgroundPlayEnabled) "Background Audio Enabled" else "Background Audio Disabled"
+                        }) {
+                            Icon(
+                                imageVector = Icons.Default.Headphones,
+                                contentDescription = "Background Audio",
+                                tint = if (backgroundPlayEnabled) MaterialTheme.colorScheme.primary else Color.White
+                            )
+                        }
+
                         // Aspect Ratio Toggle
                         IconButton(onClick = {
                             resizeMode = when (resizeMode) {

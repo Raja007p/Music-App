@@ -7,14 +7,14 @@
 
     <!-- Outer Gradient Ring -->
     <path
-        android:pathData="M54,18 C73.88,18 90,34.12 90,54 C90,73.88 73.88,90 54,90 C34.12,90 18,73.88 18,54 C18,34.12 34.12,18 54,18 Z"
-        android:strokeWidth="3.2">
+        android:pathData="M54,4 C81.61,4 104,26.39 104,54 C104,81.61 81.61,104 54,104 C26.39,104 4,81.61 4,54 C4,26.39 26.39,4 54,4 Z"
+        android:strokeWidth="3.5">
         <aapt:attr name="android:strokeColor">
             <gradient
-                android:startX="18"
-                android:startY="20"
-                android:endX="90"
-                android:endY="88"
+                android:startX="4"
+                android:startY="10"
+                android:endX="104"
+                android:endY="98"
                 android:type="linear">
                 <item android:color="#FFFF2D55" android:offset="0.0" />
                 <item android:color="#FFB5179E" android:offset="0.4" />
@@ -25,9 +25,9 @@
         <aapt:attr name="android:fillColor">
             <gradient
                 android:startX="54"
-                android:startY="18"
+                android:startY="4"
                 android:endX="54"
-                android:endY="90"
+                android:endY="104"
                 android:type="linear">
                 <item android:color="#FFFFFFFF" android:offset="0.0" />
                 <item android:color="#FFF8FAFC" android:offset="1.0" />
@@ -37,13 +37,13 @@
 
     <!-- Double Eighth Note with Gradient Fill -->
     <path
-        android:pathData="M44.5,33 L73,26 L73,36 L49.5,41.5 L49.5,64.5 C47.7,63.7 45.2,63.3 42.5,63.3 C36,63.3 30.5,67 30.5,71.5 C30.5,76 36,79.7 42.5,79.7 C48.5,79.7 53.6,76.4 54.1,72.3 L54.3,34.2 L71.5,30 L71.5,58.5 C69.7,57.7 67.2,57.3 64.5,57.3 C58,57.3 52.5,61 52.5,65.5 C52.5,70 58,73.7 64.5,73.7 C70.5,73.7 75.6,70.4 76.1,66.3 L76.3,25.2 L44.5,33 Z">
+        android:pathData="M43,26 L77,18 L77,30 L49,36.5 L49,66.5 C46.8,65.5 43.8,65 40.5,65 C32.5,65 26,69.5 26,75 C26,80.5 32.5,85 40.5,85 C48,85 54.2,81 54.8,76 L55,27.5 L75,22.5 L75,59 C72.8,58 69.8,57.5 66.5,57.5 C58.5,57.5 52,62 52,67.5 C52,73 58.5,77.5 66.5,77.5 C74,77.5 80.2,73.5 80.8,68.5 L81,17 L43,26 Z">
         <aapt:attr name="android:fillColor">
             <gradient
                 android:startX="54"
-                android:startY="25"
+                android:startY="17"
                 android:endX="54"
-                android:endY="80"
+                android:endY="85"
                 android:type="linear">
                 <item android:color="#FFFF2A6D" android:offset="0.0" />
                 <item android:color="#FFE0245E" android:offset="0.25" />

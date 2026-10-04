@@ -65,6 +65,11 @@ import com.example.ui.theme.DarkSurfaceElevated
 import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextWhite
 
+import com.example.ui.theme.LibraryLayout
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+
 enum class LibraryTab(val title: String) {
     SONGS("Songs"),
     ALBUMS("Albums"),
@@ -84,10 +89,12 @@ enum class SortMode(val label: String) {
 @Composable
 fun MusicLibraryScreen(
     songs: List<Song>,
+    layout: LibraryLayout = LibraryLayout.TABBED_LIST,
     onSongClick: (Song, List<Song>) -> Unit,
     onPlayNext: (Song) -> Unit,
     onAddToQueue: (Song) -> Unit,
     onToggleFavorite: (Song) -> Unit,
+    onRescan: () -> Unit = {},
     initialTab: LibraryTab = LibraryTab.SONGS
 ) {
     var selectedTab by remember { mutableStateOf(initialTab) }
@@ -251,25 +258,101 @@ fun MusicLibraryScreen(
             )
         }
 
-        // Content based on tab
-        when (selectedTab) {
-            LibraryTab.SONGS -> {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 4.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+        // Content based on tab or empty state
+        if (songs.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(32.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
                 ) {
-                    items(filteredSongs, key = { it.id }) { song ->
-                        SongListItem(
-                            song = song,
-                            onClick = { onSongClick(song, filteredSongs) },
-                            onPlayNext = { onPlayNext(song) },
-                            onAddToQueue = { onAddToQueue(song) },
-                            onToggleFavorite = { onToggleFavorite(song) }
+                    Box(
+                        modifier = Modifier
+                            .size(72.dp)
+                            .clip(CircleShape)
+                            .background(DarkSurfaceElevated)
+                            .border(1.dp, DarkBorder, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Album,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(36.dp)
                         )
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "No Audio Files Found",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = TextWhite
+                        )
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "No local music detected on your device. Place audio files in your Music folder and tap scan.",
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            color = TextMuted,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                    )
+                    Spacer(modifier = Modifier.height(20.dp))
+                    Button(
+                        onClick = onRescan,
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Scan Device Media")
                     }
                 }
             }
+        } else {
+            when (selectedTab) {
+                LibraryTab.SONGS -> {
+                    if (layout == LibraryLayout.GRID_CARDS) {
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(2),
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(20.dp),
+                            horizontalArrangement = Arrangement.spacedBy(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
+                            items(filteredSongs, key = { it.id }) { song ->
+                                AlbumCard(
+                                    albumName = song.title,
+                                    artist = song.artist,
+                                    coverArt = song.albumArtUri,
+                                    trackCount = 1,
+                                    onClick = { onSongClick(song, filteredSongs) }
+                                )
+                            }
+                        }
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 4.dp),
+                            verticalArrangement = Arrangement.spacedBy(if (layout == LibraryLayout.COMPACT_LIST) 4.dp else 8.dp)
+                        ) {
+                            items(filteredSongs, key = { it.id }) { song ->
+                                SongListItem(
+                                    song = song,
+                                    isCompact = layout == LibraryLayout.COMPACT_LIST,
+                                    onClick = { onSongClick(song, filteredSongs) },
+                                    onPlayNext = { onPlayNext(song) },
+                                    onAddToQueue = { onAddToQueue(song) },
+                                    onToggleFavorite = { onToggleFavorite(song) }
+                                )
+                            }
+                        }
+                    }
+                }
 
             LibraryTab.ALBUMS -> {
                 val albums = remember(filteredSongs) {
@@ -373,11 +456,13 @@ fun MusicLibraryScreen(
             }
         }
     }
+    }
 }
 
 @Composable
 fun SongListItem(
     song: Song,
+    isCompact: Boolean = false,
     onClick: () -> Unit,
     onPlayNext: () -> Unit,
     onAddToQueue: () -> Unit,
@@ -388,21 +473,21 @@ fun SongListItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(if (isCompact) 8.dp else 12.dp))
             .background(DarkSurfaceElevated)
-            .border(1.dp, DarkBorder, RoundedCornerShape(12.dp))
+            .border(1.dp, DarkBorder, RoundedCornerShape(if (isCompact) 8.dp else 12.dp))
             .clickable { onClick() }
-            .padding(10.dp),
+            .padding(if (isCompact) 6.dp else 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         ArtworkImage(
             uri = song.albumArtUri,
             modifier = Modifier
-                .size(48.dp)
-                .clip(RoundedCornerShape(10.dp))
+                .size(if (isCompact) 36.dp else 48.dp)
+                .clip(RoundedCornerShape(if (isCompact) 6.dp else 10.dp))
         )
 
-        Spacer(modifier = Modifier.width(12.dp))
+        Spacer(modifier = Modifier.width(if (isCompact) 8.dp else 12.dp))
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
@@ -410,17 +495,17 @@ fun SongListItem(
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontWeight = FontWeight.SemiBold,
                     color = TextWhite,
-                    fontSize = 14.sp
+                    fontSize = if (isCompact) 13.sp else 14.sp
                 ),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            Spacer(modifier = Modifier.height(2.dp))
+            Spacer(modifier = Modifier.height(1.dp))
             Text(
                 text = song.artist,
                 style = MaterialTheme.typography.bodySmall.copy(
                     color = TextMuted,
-                    fontSize = 12.sp
+                    fontSize = if (isCompact) 11.sp else 12.sp
                 ),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis

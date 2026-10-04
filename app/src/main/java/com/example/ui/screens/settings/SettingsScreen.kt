@@ -1,5 +1,6 @@
 package com.example.ui.screens.settings
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -21,21 +22,18 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Backup
-import androidx.compose.material.icons.filled.ColorLens
-import androidx.compose.material.icons.filled.Equalizer
-import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.PlayCircle
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Security
-import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material.icons.filled.ViewCarousel
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -51,22 +49,33 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.R
 import com.example.ui.theme.AccentColor
 import com.example.ui.theme.AppThemeMode
 import com.example.ui.theme.DarkBorder
 import com.example.ui.theme.DarkSurfaceElevated
+import com.example.ui.theme.LibraryLayout
+import com.example.ui.theme.NowPlayingLayout
 import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextWhite
+import com.example.ui.theme.VideoLayout
 
 @Composable
 fun SettingsScreen(
     currentThemeMode: AppThemeMode,
     currentAccent: AccentColor,
+    currentNowPlayingLayout: NowPlayingLayout,
+    currentLibraryLayout: LibraryLayout,
+    currentVideoLayout: VideoLayout,
     onSetThemeMode: (AppThemeMode) -> Unit,
     onSetAccentColor: (AccentColor) -> Unit,
+    onSetNowPlayingLayout: (NowPlayingLayout) -> Unit,
+    onSetLibraryLayout: (LibraryLayout) -> Unit,
+    onSetVideoLayout: (VideoLayout) -> Unit,
     onRescanMedia: () -> Unit,
     onOpenEqualizer: () -> Unit
 ) {
@@ -81,13 +90,19 @@ fun SettingsScreen(
             .fillMaxSize()
             .padding(bottom = 90.dp)
     ) {
-        // Top Header
+        // Top Header with App Logo
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            Image(
+                painter = painterResource(id = R.drawable.ic_app_logo),
+                contentDescription = "Logo",
+                modifier = Modifier.size(32.dp)
+            )
+            Spacer(modifier = Modifier.width(10.dp))
             Text(
                 text = "Settings",
                 style = MaterialTheme.typography.titleLarge.copy(
@@ -101,10 +116,167 @@ fun SettingsScreen(
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(horizontal = 20.dp, vertical = 6.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
+            // UI Layout Options Section
+            item {
+                Text(
+                    text = "UI Layout & Player Styles",
+                    style = MaterialTheme.typography.labelLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontSize = 13.sp
+                    ),
+                    modifier = Modifier.padding(start = 4.dp, bottom = 2.dp)
+                )
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(DarkSurfaceElevated)
+                        .border(1.dp, DarkBorder, RoundedCornerShape(16.dp))
+                        .padding(16.dp)
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                        // 1. Now Playing Screen Layout
+                        Column {
+                            Text(
+                                text = "Now Playing Player Screen",
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextWhite
+                                )
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                NowPlayingLayout.entries.forEach { layout ->
+                                    val isSelected = currentNowPlayingLayout == layout
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .background(if (isSelected) MaterialTheme.colorScheme.primary else Color(0xFF1E243A))
+                                            .border(
+                                                1.dp,
+                                                if (isSelected) MaterialTheme.colorScheme.primary else DarkBorder,
+                                                RoundedCornerShape(12.dp)
+                                            )
+                                            .clickable { onSetNowPlayingLayout(layout) }
+                                            .padding(vertical = 10.dp, horizontal = 4.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = layout.title,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                            color = if (isSelected) Color.White else TextMuted,
+                                            fontSize = 11.sp
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        // 2. Music Library Layout
+                        Column {
+                            Text(
+                                text = "Music Library View",
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextWhite
+                                )
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                LibraryLayout.entries.forEach { layout ->
+                                    val isSelected = currentLibraryLayout == layout
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .background(if (isSelected) MaterialTheme.colorScheme.primary else Color(0xFF1E243A))
+                                            .border(
+                                                1.dp,
+                                                if (isSelected) MaterialTheme.colorScheme.primary else DarkBorder,
+                                                RoundedCornerShape(12.dp)
+                                            )
+                                            .clickable { onSetLibraryLayout(layout) }
+                                            .padding(vertical = 10.dp, horizontal = 4.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = layout.title,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                            color = if (isSelected) Color.White else TextMuted,
+                                            fontSize = 11.sp
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        // 3. Video Library Layout
+                        Column {
+                            Text(
+                                text = "Video Library View",
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextWhite
+                                )
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                VideoLayout.entries.forEach { layout ->
+                                    val isSelected = currentVideoLayout == layout
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .background(if (isSelected) MaterialTheme.colorScheme.primary else Color(0xFF1E243A))
+                                            .border(
+                                                1.dp,
+                                                if (isSelected) MaterialTheme.colorScheme.primary else DarkBorder,
+                                                RoundedCornerShape(12.dp)
+                                            )
+                                            .clickable { onSetVideoLayout(layout) }
+                                            .padding(vertical = 10.dp, horizontal = 4.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = layout.title,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                            color = if (isSelected) Color.White else TextMuted,
+                                            fontSize = 11.sp
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             // Theme Mode Selector Card
             item {
+                Text(
+                    text = "Appearance & Theming",
+                    style = MaterialTheme.typography.labelLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontSize = 13.sp
+                    ),
+                    modifier = Modifier.padding(start = 4.dp, bottom = 2.dp)
+                )
+
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -115,13 +287,13 @@ fun SettingsScreen(
                 ) {
                     Column {
                         Text(
-                            text = "App Theme",
-                            style = MaterialTheme.typography.bodyLarge.copy(
+                            text = "Theme Mode",
+                            style = MaterialTheme.typography.bodyMedium.copy(
                                 fontWeight = FontWeight.Bold,
                                 color = TextWhite
                             )
                         )
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(10.dp))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -152,29 +324,17 @@ fun SettingsScreen(
                                 }
                             }
                         }
-                    }
-                }
-            }
 
-            // Accent Color Selector Card
-            item {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(DarkSurfaceElevated)
-                        .border(1.dp, DarkBorder, RoundedCornerShape(16.dp))
-                        .padding(16.dp)
-                ) {
-                    Column {
+                        Spacer(modifier = Modifier.height(16.dp))
+
                         Text(
                             text = "Accent Color",
-                            style = MaterialTheme.typography.bodyLarge.copy(
+                            style = MaterialTheme.typography.bodyMedium.copy(
                                 fontWeight = FontWeight.Bold,
                                 color = TextWhite
                             )
                         )
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(10.dp))
                         LazyRow(
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
@@ -190,20 +350,40 @@ fun SettingsScreen(
                                             Color.White,
                                             CircleShape
                                         )
-                                        .clickable { onSetAccentColor(accent) }
-                                )
+                                        .clickable { onSetAccentColor(accent) },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    if (isSelected) {
+                                        Icon(
+                                            imageVector = Icons.Default.Check,
+                                            contentDescription = null,
+                                            tint = Color.White,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
                 }
             }
 
-            // Playback Options
+            // Audio & Playback Options
             item {
+                Text(
+                    text = "Audio & Playback",
+                    style = MaterialTheme.typography.labelLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontSize = 13.sp
+                    ),
+                    modifier = Modifier.padding(start = 4.dp, bottom = 2.dp)
+                )
+
                 SettingsSectionItem(
-                    title = "Audio & Equalizer",
+                    title = "Equalizer & Sound Effects",
                     icon = Icons.Default.VolumeUp,
-                    subtitle = "10-band EQ, Bass boost & Virtualizer",
+                    subtitle = "10-band EQ, Bass Boost, Virtualizer & 10 presets",
                     onClick = onOpenEqualizer
                 )
             }
@@ -211,7 +391,7 @@ fun SettingsScreen(
             item {
                 SettingsToggleItem(
                     title = "Auto-play Next Track",
-                    subtitle = "Automatically play the next song in queue",
+                    subtitle = "Automatically advance to the next song in queue",
                     checked = autoPlayNext,
                     onCheckedChange = { autoPlayNext = it }
                 )
@@ -226,12 +406,22 @@ fun SettingsScreen(
                 )
             }
 
-            // Rescan Library
+            // Media Library Scanning
             item {
+                Text(
+                    text = "Media Library",
+                    style = MaterialTheme.typography.labelLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontSize = 13.sp
+                    ),
+                    modifier = Modifier.padding(start = 4.dp, bottom = 2.dp)
+                )
+
                 SettingsSectionItem(
-                    title = "Rescan Media Library",
+                    title = "Rescan Device Media",
                     icon = Icons.Default.Refresh,
-                    subtitle = "Scan device storage for new songs and videos",
+                    subtitle = "Scan device storage for real audio and video files",
                     onClick = onRescanMedia
                 )
             }
@@ -249,9 +439,9 @@ fun SettingsScreen(
             // Privacy
             item {
                 SettingsSectionItem(
-                    title = "Privacy & Permissions",
+                    title = "Privacy & Offline Mode",
                     icon = Icons.Default.Security,
-                    subtitle = "Zero cloud tracking, 100% offline player",
+                    subtitle = "100% offline player, zero data collection",
                     onClick = { showPrivacyDialog = true }
                 )
             }
@@ -261,7 +451,7 @@ fun SettingsScreen(
                 SettingsSectionItem(
                     title = "About TuneFlow",
                     icon = Icons.Default.Info,
-                    subtitle = "v1.0.0 • GitHub APK Build ready",
+                    subtitle = "v1.0.0 • Modern Music & Video Player",
                     onClick = { showAboutDialog = true }
                 )
             }
@@ -273,18 +463,25 @@ fun SettingsScreen(
             onDismissRequest = { showAboutDialog = false },
             containerColor = DarkSurfaceElevated,
             title = {
-                Text("TuneFlow v1.0.0", color = TextWhite, fontWeight = FontWeight.Bold)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Image(
+                        painter = painterResource(id = R.drawable.ic_app_logo),
+                        contentDescription = null,
+                        modifier = Modifier.size(32.dp)
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text("TuneFlow v1.0.0", color = TextWhite, fontWeight = FontWeight.Bold)
+                }
             },
             text = {
                 Text(
-                    text = "A modern all-in-one offline Music & Video Player for Android.\n\n" +
-                            "Features:\n" +
-                            "• 10-band parametric Equalizer with Bass Boost\n" +
-                            "• Dedicated Sleep Timer with visual countdown\n" +
-                            "• Smart & custom Playlists and persistent queue\n" +
-                            "• Dedicated fullscreen Video Player with gesture controls\n" +
-                            "• GitHub Actions automated workflow for continuous APK builds\n" +
-                            "• Offline-first with zero telemetry",
+                    text = "TuneFlow is an offline music & video player for Android.\n\n" +
+                            "• 100% offline — only your real local device media is scanned\n" +
+                            "• Real-time video thumbnail extraction\n" +
+                            "• Seamless background playback & notification controls\n" +
+                            "• Resume playback for both audio and video\n" +
+                            "• 3 customizable Now Playing, Library & Video layouts\n" +
+                            "• 10-band parametric Equalizer with Bass Boost & Virtualizer",
                     color = TextMuted,
                     fontSize = 13.sp,
                     lineHeight = 20.sp
@@ -307,9 +504,8 @@ fun SettingsScreen(
             },
             text = {
                 Text(
-                    text = "TuneFlow only requests read access to device audio and video files via standard Android MediaStore APIs. " +
-                            "None of your media, playlists, or usage information is ever uploaded to any cloud server or third party. " +
-                            "All statistics, playlists, and equalizers remain strictly on your local device.",
+                    text = "TuneFlow only accesses your device storage to index and play local audio and video files. " +
+                            "None of your media, history, or settings are ever uploaded or shared. Everything remains strictly on your device.",
                     color = TextMuted,
                     fontSize = 13.sp,
                     lineHeight = 20.sp
@@ -332,7 +528,7 @@ fun SettingsScreen(
             },
             text = {
                 Text(
-                    text = "You can export your custom playlists, favorites, and equalizer presets as a local JSON backup file, or restore them anytime.",
+                    text = "You can export your playlists and equalizer presets as a local file, or restore them anytime.",
                     color = TextMuted,
                     fontSize = 13.sp
                 )

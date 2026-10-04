@@ -85,6 +85,18 @@ import com.example.ui.theme.PurpleBlueGradient
 import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextWhite
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode as AnimRepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.drawscope.Stroke
+import com.example.ui.theme.NowPlayingLayout
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NowPlayingScreen(
@@ -96,6 +108,8 @@ fun NowPlayingScreen(
     repeatMode: RepeatMode,
     playbackSpeed: Float,
     queue: List<Song>,
+    layout: NowPlayingLayout = NowPlayingLayout.COSMIC_EXPANSIVE,
+    onChangeLayout: (NowPlayingLayout) -> Unit = {},
     onCollapse: () -> Unit,
     onPlayPause: () -> Unit,
     onNext: () -> Unit,
@@ -250,29 +264,82 @@ fun NowPlayingScreen(
                                     onOpenEqualizer()
                                 }
                             )
+                            NowPlayingLayout.entries.forEach { opt ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            "Layout: ${opt.title}",
+                                            color = if (layout == opt) MaterialTheme.colorScheme.primary else TextWhite
+                                        )
+                                    },
+                                    onClick = {
+                                        onChangeLayout(opt)
+                                        showOptionsMenu = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Artwork or Vinyl Record Display based on Layout Option
+                when (layout) {
+                    NowPlayingLayout.COSMIC_EXPANSIVE -> {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .aspectRatio(1f)
+                                .clip(RoundedCornerShape(28.dp))
+                                .border(1.dp, DarkBorder, RoundedCornerShape(28.dp))
+                                .shadow(24.dp, RoundedCornerShape(28.dp), spotColor = MaterialTheme.colorScheme.primary)
+                        ) {
+                            ArtworkImage(
+                                uri = song.albumArtUri,
+                                modifier = Modifier.fillMaxSize(),
+                                cornerRadius = 28.dp
+                            )
+                        }
+                    }
+
+                    NowPlayingLayout.VINYL_TURNTABLE -> {
+                        VinylRecordView(
+                            artworkUri = song.albumArtUri,
+                            isPlaying = isPlaying,
+                            modifier = Modifier
+                                .fillMaxWidth(0.9f)
+                                .aspectRatio(1f)
+                        )
+                    }
+
+                    NowPlayingLayout.MINIMAL_CARD -> {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(DarkSurfaceElevated)
+                                .border(1.dp, DarkBorder, RoundedCornerShape(20.dp))
+                                .padding(16.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(200.dp)
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .shadow(16.dp, RoundedCornerShape(16.dp))
+                            ) {
+                                ArtworkImage(
+                                    uri = song.albumArtUri,
+                                    modifier = Modifier.fillMaxSize(),
+                                    cornerRadius = 16.dp
+                                )
+                            }
                         }
                     }
                 }
 
                 Spacer(modifier = Modifier.height(28.dp))
-
-                // Large Album Artwork
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(1f)
-                        .clip(RoundedCornerShape(28.dp))
-                        .border(1.dp, DarkBorder, RoundedCornerShape(28.dp))
-                        .shadow(24.dp, RoundedCornerShape(28.dp), spotColor = MaterialTheme.colorScheme.primary)
-                ) {
-                    ArtworkImage(
-                        uri = song.albumArtUri,
-                        modifier = Modifier.fillMaxSize(),
-                        cornerRadius = 28.dp
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(30.dp))
 
                 // Title, Artist, Favorite Row
                 Row(
@@ -649,5 +716,70 @@ fun PlayerFeatureButton(
                 fontSize = 11.sp
             )
         )
+    }
+}
+
+@Composable
+fun VinylRecordView(
+    artworkUri: String?,
+    isPlaying: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "vinyl")
+    val rotation by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(14000, easing = LinearEasing),
+            repeatMode = AnimRepeatMode.Restart
+        ),
+        label = "rotation"
+    )
+
+    Box(
+        modifier = modifier
+            .shadow(28.dp, CircleShape, spotColor = MaterialTheme.colorScheme.primary)
+            .clip(CircleShape)
+            .background(Color(0xFF0F1117))
+            .border(2.dp, Color(0xFF1F2433), CircleShape),
+        contentAlignment = Alignment.Center
+    ) {
+        // Vinyl grooves
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val center = Offset(size.width / 2f, size.height / 2f)
+            val maxR = size.width / 2f
+            for (i in 5..10) {
+                drawCircle(
+                    color = Color.White.copy(alpha = 0.04f),
+                    radius = maxR * (i / 11f),
+                    center = center,
+                    style = Stroke(width = 1.2f)
+                )
+            }
+        }
+
+        // Center spinning label with album artwork
+        Box(
+            modifier = Modifier
+                .fillMaxSize(0.44f)
+                .rotate(if (isPlaying) rotation else 0f)
+                .clip(CircleShape)
+                .border(2.dp, Color(0xFF333B4F), CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            ArtworkImage(
+                uri = artworkUri,
+                modifier = Modifier.fillMaxSize(),
+                cornerRadius = 100.dp
+            )
+            // Center spindle
+            Box(
+                modifier = Modifier
+                    .size(16.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFF0A0C12))
+                    .border(2.dp, Color(0xFF475569), CircleShape)
+            )
+        }
     }
 }

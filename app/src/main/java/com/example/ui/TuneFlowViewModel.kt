@@ -1,7 +1,7 @@
 package com.example.ui
 
 import android.app.Application
-import android.os.Build
+import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.db.PlaylistEntity
@@ -16,12 +16,14 @@ import com.example.playback.TuneFlowPlayerManager
 import com.example.ui.screens.music.LibraryTab
 import com.example.ui.theme.AccentColor
 import com.example.ui.theme.AppThemeMode
+import com.example.ui.theme.LibraryLayout
+import com.example.ui.theme.NowPlayingLayout
+import com.example.ui.theme.VideoLayout
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -51,6 +53,7 @@ class TuneFlowViewModel(application: Application) : AndroidViewModel(application
 
     val playerManager = TuneFlowPlayerManager.getInstance(application)
     private val mediaScanner = MediaScanner(application)
+    private val prefs = application.getSharedPreferences("tuneflow_ui_prefs", Context.MODE_PRIVATE)
 
     // Navigation and Overlays
     private val _currentNavScreen = MutableStateFlow(MainNavScreen.HOME)
@@ -63,11 +66,31 @@ class TuneFlowViewModel(application: Application) : AndroidViewModel(application
     val musicInitialTab: StateFlow<LibraryTab> = _musicInitialTab.asStateFlow()
 
     // Appearance State
-    private val _themeMode = MutableStateFlow(AppThemeMode.DARK)
+    private val _themeMode = MutableStateFlow(
+        AppThemeMode.entries.getOrElse(prefs.getInt("theme_mode", 0)) { AppThemeMode.DARK }
+    )
     val themeMode: StateFlow<AppThemeMode> = _themeMode.asStateFlow()
 
-    private val _accentColor = MutableStateFlow(AccentColor.PURPLE)
+    private val _accentColor = MutableStateFlow(
+        AccentColor.entries.getOrElse(prefs.getInt("accent_color", 0)) { AccentColor.PURPLE }
+    )
     val accentColor: StateFlow<AccentColor> = _accentColor.asStateFlow()
+
+    // UI Layout Customization Options
+    private val _nowPlayingLayout = MutableStateFlow(
+        NowPlayingLayout.entries.getOrElse(prefs.getInt("layout_now_playing", 0)) { NowPlayingLayout.COSMIC_EXPANSIVE }
+    )
+    val nowPlayingLayout: StateFlow<NowPlayingLayout> = _nowPlayingLayout.asStateFlow()
+
+    private val _libraryLayout = MutableStateFlow(
+        LibraryLayout.entries.getOrElse(prefs.getInt("layout_library", 0)) { LibraryLayout.TABBED_LIST }
+    )
+    val libraryLayout: StateFlow<LibraryLayout> = _libraryLayout.asStateFlow()
+
+    private val _videoLayout = MutableStateFlow(
+        VideoLayout.entries.getOrElse(prefs.getInt("layout_video", 0)) { VideoLayout.CINEMA_CARDS }
+    )
+    val videoLayout: StateFlow<VideoLayout> = _videoLayout.asStateFlow()
 
     // Data Flows from Room
     val songs: StateFlow<List<Song>> = songDao.getAllSongs()
@@ -97,7 +120,7 @@ class TuneFlowViewModel(application: Application) : AndroidViewModel(application
     val playlists: StateFlow<List<Playlist>> = playlistDao.getAllPlaylists()
         .map { list ->
             list.map { entity ->
-                entity.toPlaylist(count = 12)
+                entity.toPlaylist(count = 0)
             }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -118,7 +141,7 @@ class TuneFlowViewModel(application: Application) : AndroidViewModel(application
     val equalizerState: StateFlow<EqualizerState> = playerManager.effectsManager.equalizerState
 
     init {
-        // Automatically scan or seed media on start
+        // Automatically purge any demo data & scan real device media on start
         viewModelScope.launch(Dispatchers.IO) {
             mediaScanner.scanDeviceMedia(forceRescan = false)
         }
@@ -183,13 +206,38 @@ class TuneFlowViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    // Video Playback position persistence
+    fun saveVideoPosition(videoId: Long, pos: Long) {
+        viewModelScope.launch(Dispatchers.IO) {
+            videoDao.updatePlaybackPosition(videoId, pos)
+        }
+    }
+
+    // Layout customizers
+    fun setNowPlayingLayout(layout: NowPlayingLayout) {
+        _nowPlayingLayout.value = layout
+        prefs.edit().putInt("layout_now_playing", layout.ordinal).apply()
+    }
+
+    fun setLibraryLayout(layout: LibraryLayout) {
+        _libraryLayout.value = layout
+        prefs.edit().putInt("layout_library", layout.ordinal).apply()
+    }
+
+    fun setVideoLayout(layout: VideoLayout) {
+        _videoLayout.value = layout
+        prefs.edit().putInt("layout_video", layout.ordinal).apply()
+    }
+
     // Appearance
     fun setThemeMode(mode: AppThemeMode) {
         _themeMode.value = mode
+        prefs.edit().putInt("theme_mode", mode.ordinal).apply()
     }
 
     fun setAccentColor(accent: AccentColor) {
         _accentColor.value = accent
+        prefs.edit().putInt("accent_color", accent.ordinal).apply()
     }
 
     fun rescanMedia() {

@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.PlaylistPlay
 import androidx.compose.material.icons.filled.QueueMusic
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.TrendingUp
@@ -64,6 +65,10 @@ import com.example.ui.theme.PurpleBlueGradient
 import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextWhite
 import java.util.Calendar
+
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import com.example.R
 
 @Composable
 fun HomeScreen(
@@ -103,20 +108,11 @@ fun HomeScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(34.dp)
-                            .clip(CircleShape)
-                            .background(PurpleBlueGradient),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.MusicNote,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
+                    Image(
+                        painter = painterResource(id = R.drawable.ic_app_logo),
+                        contentDescription = "Logo",
+                        modifier = Modifier.size(34.dp)
+                    )
                     Spacer(modifier = Modifier.width(10.dp))
                     Text(
                         text = "TuneFlow",
@@ -263,6 +259,51 @@ fun HomeScreen(
                                 tint = Color.White,
                                 modifier = Modifier.size(28.dp)
                             )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(20.dp))
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp)
+                        .height(130.dp)
+                        .clip(RoundedCornerShape(22.dp))
+                        .background(DarkSurfaceElevated)
+                        .border(1.dp, DarkBorder, RoundedCornerShape(22.dp))
+                        .clickable { onQuickAccessClick("SONGS") }
+                        .padding(20.dp),
+                    contentAlignment = Alignment.CenterStart
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Welcome to TuneFlow",
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextWhite,
+                                    fontSize = 17.sp
+                                )
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Scan your device to find all your local songs and videos.",
+                                style = MaterialTheme.typography.bodySmall.copy(color = TextMuted)
+                            )
+                        }
+                        Box(
+                            modifier = Modifier
+                                .size(46.dp)
+                                .clip(CircleShape)
+                                .background(PurpleBlueGradient),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.Refresh, contentDescription = null, tint = Color.White)
                         }
                     }
                 }

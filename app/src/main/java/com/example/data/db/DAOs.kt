@@ -51,6 +51,9 @@ interface SongDao {
 
     @Query("SELECT COUNT(*) FROM songs")
     suspend fun getSongCount(): Int
+
+    @Query("DELETE FROM songs WHERE mediaId LIKE 'demo_%'")
+    suspend fun deleteDemoSongs()
 }
 
 @Dao
@@ -84,12 +87,18 @@ interface VideoDao {
 
     @Query("SELECT COUNT(*) FROM videos")
     suspend fun getVideoCount(): Int
+
+    @Query("DELETE FROM videos WHERE mediaId LIKE 'vid_%'")
+    suspend fun deleteDemoVideos()
 }
 
 @Dao
 interface PlaylistDao {
     @Query("SELECT * FROM playlists ORDER BY createdAt DESC")
     fun getAllPlaylists(): Flow<List<PlaylistEntity>>
+
+    @Query("DELETE FROM playlists WHERE isSmart = 0 AND name IN ('Chill Vibes', 'Workout', 'Anime OST', 'Night Drive')")
+    suspend fun deleteDemoPlaylists()
 
     @Query("SELECT * FROM playlists WHERE id = :id LIMIT 1")
     suspend fun getPlaylistById(id: Long): PlaylistEntity?
