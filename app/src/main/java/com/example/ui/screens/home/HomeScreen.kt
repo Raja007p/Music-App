@@ -32,7 +32,6 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.PlaylistPlay
 import androidx.compose.material.icons.filled.QueueMusic
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.TrendingUp
@@ -43,7 +42,10 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -66,10 +68,6 @@ import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextWhite
 import java.util.Calendar
 
-import androidx.compose.foundation.Image
-import androidx.compose.ui.res.painterResource
-import com.example.R
-
 @Composable
 fun HomeScreen(
     songs: List<Song>,
@@ -77,7 +75,11 @@ fun HomeScreen(
     favoriteSongs: List<Song>,
     mostPlayed: List<Song>,
     recentlyAdded: List<Song>,
+    playbackPosition: Long = 0L,
     onSongClick: (Song, List<Song>) -> Unit,
+    onPlayNext: (Song) -> Unit = {},
+    onAddToQueue: (Song) -> Unit = {},
+    onToggleFavorite: (Song) -> Unit = {},
     onNavigateToEqualizer: () -> Unit,
     onNavigateToSettings: () -> Unit,
     onNavigateToSearch: () -> Unit,
@@ -108,11 +110,20 @@ fun HomeScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Image(
-                        painter = painterResource(id = R.drawable.ic_app_logo),
-                        contentDescription = "Logo",
-                        modifier = Modifier.size(34.dp)
-                    )
+                    Box(
+                        modifier = Modifier
+                            .size(34.dp)
+                            .clip(CircleShape)
+                            .background(PurpleBlueGradient),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.MusicNote,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                     Spacer(modifier = Modifier.width(10.dp))
                     Text(
                         text = "TuneFlow",
@@ -236,7 +247,11 @@ fun HomeScreen(
                                 overflow = TextOverflow.Ellipsis
                             )
                             Text(
-                                text = "Your favorite music, right where you left off",
+                                text = if (playbackPosition > 2000L) {
+                                    "Resume at ${formatDuration(playbackPosition)} • ${continueSong.artist}"
+                                } else {
+                                    "${continueSong.artist} • ${continueSong.album}"
+                                },
                                 style = MaterialTheme.typography.bodySmall.copy(
                                     color = TextMuted,
                                     fontSize = 12.sp
@@ -263,51 +278,6 @@ fun HomeScreen(
                     }
                 }
                 Spacer(modifier = Modifier.height(20.dp))
-            } else {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp)
-                        .height(130.dp)
-                        .clip(RoundedCornerShape(22.dp))
-                        .background(DarkSurfaceElevated)
-                        .border(1.dp, DarkBorder, RoundedCornerShape(22.dp))
-                        .clickable { onQuickAccessClick("SONGS") }
-                        .padding(20.dp),
-                    contentAlignment = Alignment.CenterStart
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Welcome to TuneFlow",
-                                style = MaterialTheme.typography.titleMedium.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    color = TextWhite,
-                                    fontSize = 17.sp
-                                )
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = "Scan your device to find all your local songs and videos.",
-                                style = MaterialTheme.typography.bodySmall.copy(color = TextMuted)
-                            )
-                        }
-                        Box(
-                            modifier = Modifier
-                                .size(46.dp)
-                                .clip(CircleShape)
-                                .background(PurpleBlueGradient),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Default.Refresh, contentDescription = null, tint = Color.White)
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(20.dp))
             }
         }
 
@@ -324,11 +294,11 @@ fun HomeScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     QuickAccessCard(
-                        title = "Recently Played",
+                        title = "Playback History",
                         icon = Icons.Default.History,
                         gradient = Brush.linearGradient(listOf(Color(0xFF8B5CF6), Color(0xFF6366F1))),
                         modifier = Modifier.weight(1f),
-                        onClick = { onQuickAccessClick("RECENTLY_PLAYED") }
+                        onClick = { onQuickAccessClick("HISTORY") }
                     )
                     QuickAccessCard(
                         title = "Most Played",
@@ -362,12 +332,10 @@ fun HomeScreen(
             Spacer(modifier = Modifier.height(24.dp))
         }
 
-        // Quick Access Category Row
+        // Quick Access Category Row (clean header without unnecessary see all)
         item {
             SectionHeader(
-                title = "Quick Access",
-                actionText = "See all",
-                onActionClick = { onQuickAccessClick("SONGS") }
+                title = "Categories"
             )
 
             Row(
@@ -415,8 +383,8 @@ fun HomeScreen(
             val listToShow = if (recentlyPlayed.isNotEmpty()) recentlyPlayed else songs
             SectionHeader(
                 title = "Recently Played",
-                actionText = "View All",
-                onActionClick = { onQuickAccessClick("SONGS") }
+                actionText = "History",
+                onActionClick = { onQuickAccessClick("HISTORY") }
             )
 
             Column(
@@ -428,7 +396,10 @@ fun HomeScreen(
                 listToShow.take(5).forEach { song ->
                     SongRowItem(
                         song = song,
-                        onClick = { onSongClick(song, listToShow) }
+                        onClick = { onSongClick(song, listToShow) },
+                        onPlayNext = { onPlayNext(song) },
+                        onAddToQueue = { onAddToQueue(song) },
+                        onToggleFavorite = { onToggleFavorite(song) }
                     )
                 }
             }
@@ -525,8 +496,13 @@ fun CategoryPillItem(
 @Composable
 fun SongRowItem(
     song: Song,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onPlayNext: () -> Unit = {},
+    onAddToQueue: () -> Unit = {},
+    onToggleFavorite: () -> Unit = {}
 ) {
+    var menuExpanded by remember { mutableStateOf(false) }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -575,13 +551,48 @@ fun SongRowItem(
             )
         )
 
-        IconButton(onClick = { /* more */ }, modifier = Modifier.size(36.dp)) {
-            Icon(
-                imageVector = Icons.Default.MoreVert,
-                contentDescription = "Options",
-                tint = TextMuted,
-                modifier = Modifier.size(18.dp)
-            )
+        Box {
+            IconButton(onClick = { menuExpanded = true }, modifier = Modifier.size(36.dp)) {
+                Icon(
+                    imageVector = Icons.Default.MoreVert,
+                    contentDescription = "Options",
+                    tint = TextMuted,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+
+            androidx.compose.material3.DropdownMenu(
+                expanded = menuExpanded,
+                onDismissRequest = { menuExpanded = false },
+                modifier = Modifier.background(DarkSurfaceElevated)
+            ) {
+                androidx.compose.material3.DropdownMenuItem(
+                    text = { Text("Play Next", color = TextWhite) },
+                    onClick = {
+                        menuExpanded = false
+                        onPlayNext()
+                    }
+                )
+                androidx.compose.material3.DropdownMenuItem(
+                    text = { Text("Add to Queue", color = TextWhite) },
+                    onClick = {
+                        menuExpanded = false
+                        onAddToQueue()
+                    }
+                )
+                androidx.compose.material3.DropdownMenuItem(
+                    text = {
+                        Text(
+                            if (song.isFavorite) "Remove from Favorites" else "Add to Favorites",
+                            color = TextWhite
+                        )
+                    },
+                    onClick = {
+                        menuExpanded = false
+                        onToggleFavorite()
+                    }
+                )
+            }
         }
     }
 }

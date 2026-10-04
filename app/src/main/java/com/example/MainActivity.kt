@@ -144,6 +144,7 @@ fun MainApp(viewModel: TuneFlowViewModel) {
     val mostPlayed by viewModel.mostPlayed.collectAsStateWithLifecycle()
     val recentlyAdded by viewModel.recentlyAdded.collectAsStateWithLifecycle()
     val videos by viewModel.videos.collectAsStateWithLifecycle()
+    val recentlyPlayedVideos by viewModel.recentlyPlayedVideos.collectAsStateWithLifecycle()
     val playlists by viewModel.playlists.collectAsStateWithLifecycle()
 
     val currentSong by viewModel.currentSong.collectAsStateWithLifecycle()
@@ -161,10 +162,6 @@ fun MainApp(viewModel: TuneFlowViewModel) {
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
     val accentColor by viewModel.accentColor.collectAsStateWithLifecycle()
     val musicInitialTab by viewModel.musicInitialTab.collectAsStateWithLifecycle()
-
-    val nowPlayingLayout by viewModel.nowPlayingLayout.collectAsStateWithLifecycle()
-    val libraryLayout by viewModel.libraryLayout.collectAsStateWithLifecycle()
-    val videoLayout by viewModel.videoLayout.collectAsStateWithLifecycle()
 
     // Handle back button
     BackHandler(enabled = activeOverlay !is ActiveOverlay.None || currentNavScreen != MainNavScreen.HOME) {
@@ -229,13 +226,18 @@ fun MainApp(viewModel: TuneFlowViewModel) {
                             favoriteSongs = favoriteSongs,
                             mostPlayed = mostPlayed,
                             recentlyAdded = recentlyAdded,
+                            playbackPosition = positionMs,
                             onSongClick = { song, list -> viewModel.playSong(song, list) },
+                            onPlayNext = { viewModel.playNext(it) },
+                            onAddToQueue = { viewModel.addToQueue(it) },
+                            onToggleFavorite = { viewModel.toggleFavorite(it) },
                             onNavigateToEqualizer = { viewModel.openOverlay(ActiveOverlay.Equalizer) },
                             onNavigateToSettings = { viewModel.setNavScreen(MainNavScreen.SETTINGS) },
                             onNavigateToSearch = { viewModel.openMusicWithTab(LibraryTab.SONGS) },
                             onQuickAccessClick = { category ->
                                 when (category) {
-                                    "RECENTLY_PLAYED" -> viewModel.openMusicWithTab(LibraryTab.SONGS)
+                                    "HISTORY" -> viewModel.openMusicWithTab(LibraryTab.HISTORY)
+                                    "RECENTLY_PLAYED" -> viewModel.openMusicWithTab(LibraryTab.HISTORY)
                                     "MOST_PLAYED" -> viewModel.openMusicWithTab(LibraryTab.SONGS)
                                     "RECENTLY_ADDED" -> viewModel.openMusicWithTab(LibraryTab.SONGS)
                                     "FAVORITES" -> {
@@ -257,22 +259,22 @@ fun MainApp(viewModel: TuneFlowViewModel) {
 
                         MainNavScreen.MUSIC -> MusicLibraryScreen(
                             songs = songs,
-                            layout = libraryLayout,
+                            recentlyPlayed = recentlyPlayed,
                             onSongClick = { song, list -> viewModel.playSong(song, list) },
                             onPlayNext = { viewModel.playNext(it) },
                             onAddToQueue = { viewModel.addToQueue(it) },
                             onToggleFavorite = { viewModel.toggleFavorite(it) },
-                            onRescan = { viewModel.rescanMedia() },
+                            onClearHistory = { viewModel.clearAudioHistory() },
                             initialTab = musicInitialTab
                         )
 
                         MainNavScreen.VIDEOS -> VideoLibraryScreen(
                             videos = videos,
-                            layout = videoLayout,
+                            recentlyPlayedVideos = recentlyPlayedVideos,
                             onVideoClick = { video ->
                                 viewModel.openOverlay(ActiveOverlay.VideoPlayer(video))
                             },
-                            onRescan = { viewModel.rescanMedia() }
+                            onClearHistory = { viewModel.clearVideoHistory() }
                         )
 
                         MainNavScreen.PLAYLISTS -> PlaylistsScreen(
@@ -287,14 +289,12 @@ fun MainApp(viewModel: TuneFlowViewModel) {
                         MainNavScreen.SETTINGS -> SettingsScreen(
                             currentThemeMode = themeMode,
                             currentAccent = accentColor,
-                            currentNowPlayingLayout = nowPlayingLayout,
-                            currentLibraryLayout = libraryLayout,
-                            currentVideoLayout = videoLayout,
+                            isResumePlaybackEnabled = viewModel.isResumePlaybackEnabled(),
+                            isVideoBackgroundPlayEnabled = viewModel.isVideoBackgroundPlayEnabled(),
                             onSetThemeMode = { viewModel.setThemeMode(it) },
                             onSetAccentColor = { viewModel.setAccentColor(it) },
-                            onSetNowPlayingLayout = { viewModel.setNowPlayingLayout(it) },
-                            onSetLibraryLayout = { viewModel.setLibraryLayout(it) },
-                            onSetVideoLayout = { viewModel.setVideoLayout(it) },
+                            onToggleResumePlayback = { viewModel.setResumePlaybackEnabled(it) },
+                            onToggleVideoBackgroundPlay = { viewModel.setVideoBackgroundPlayEnabled(it) },
                             onRescanMedia = { viewModel.rescanMedia() },
                             onOpenEqualizer = { viewModel.openOverlay(ActiveOverlay.Equalizer) }
                         )
@@ -317,8 +317,6 @@ fun MainApp(viewModel: TuneFlowViewModel) {
                     repeatMode = repeatMode,
                     playbackSpeed = playbackSpeed,
                     queue = queue,
-                    layout = nowPlayingLayout,
-                    onChangeLayout = { viewModel.setNowPlayingLayout(it) },
                     onCollapse = { viewModel.closeOverlay() },
                     onPlayPause = { viewModel.togglePlayPause() },
                     onNext = { viewModel.next() },
@@ -374,8 +372,9 @@ fun MainApp(viewModel: TuneFlowViewModel) {
                 if (video != null) {
                     FullscreenVideoPlayer(
                         video = video,
-                        onSavePosition = { id, pos -> viewModel.saveVideoPosition(id, pos) },
-                        onClose = { viewModel.closeOverlay() }
+                        onClose = { viewModel.closeOverlay() },
+                        onUpdatePosition = { id, pos -> viewModel.updateVideoPosition(id, pos) },
+                        onPlayBackground = { vid, pos -> viewModel.playVideoBackground(vid, pos) }
                     )
                 }
             }

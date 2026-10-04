@@ -54,6 +54,9 @@ interface SongDao {
 
     @Query("DELETE FROM songs WHERE mediaId LIKE 'demo_%'")
     suspend fun deleteDemoSongs()
+
+    @Query("UPDATE songs SET lastPlayedTimestamp = 0")
+    suspend fun clearHistory()
 }
 
 @Dao
@@ -65,7 +68,7 @@ interface VideoDao {
     fun getFavoriteVideos(): Flow<List<VideoEntity>>
 
     @Query("SELECT * FROM videos WHERE lastPlayedTimestamp > 0 ORDER BY lastPlayedTimestamp DESC LIMIT :limit")
-    fun getRecentlyPlayedVideos(limit: Int = 20): Flow<List<VideoEntity>>
+    fun getRecentlyPlayedVideos(limit: Int = 50): Flow<List<VideoEntity>>
 
     @Query("SELECT * FROM videos WHERE id = :id LIMIT 1")
     suspend fun getVideoById(id: Long): VideoEntity?
@@ -90,15 +93,15 @@ interface VideoDao {
 
     @Query("DELETE FROM videos WHERE mediaId LIKE 'vid_%'")
     suspend fun deleteDemoVideos()
+
+    @Query("UPDATE videos SET lastPlayedTimestamp = 0, lastPositionMs = 0")
+    suspend fun clearVideoHistory()
 }
 
 @Dao
 interface PlaylistDao {
     @Query("SELECT * FROM playlists ORDER BY createdAt DESC")
     fun getAllPlaylists(): Flow<List<PlaylistEntity>>
-
-    @Query("DELETE FROM playlists WHERE isSmart = 0 AND name IN ('Chill Vibes', 'Workout', 'Anime OST', 'Night Drive')")
-    suspend fun deleteDemoPlaylists()
 
     @Query("SELECT * FROM playlists WHERE id = :id LIMIT 1")
     suspend fun getPlaylistById(id: Long): PlaylistEntity?
@@ -111,6 +114,9 @@ interface PlaylistDao {
 
     @Query("DELETE FROM playlists WHERE id = :id")
     suspend fun deletePlaylist(id: Long)
+
+    @Query("DELETE FROM playlists WHERE name IN ('Chill Vibes', 'Workout', 'Anime OST', 'Night Drive') AND isSmart = 0")
+    suspend fun deleteDemoPlaylists()
 
     @Query("""
         SELECT s.* FROM songs s

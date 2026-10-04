@@ -2,6 +2,7 @@ package com.example.data.scanner
 
 import android.content.ContentUris
 import android.content.Context
+import android.net.Uri
 import android.provider.MediaStore
 import android.util.Log
 import com.example.data.db.PlaylistEntity
@@ -10,6 +11,8 @@ import com.example.data.db.SongEntity
 import com.example.data.db.TuneFlowDatabase
 import com.example.data.db.VideoDao
 import com.example.data.db.VideoEntity
+import com.example.data.model.Song
+import com.example.data.model.Video
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -21,16 +24,14 @@ class MediaScanner(private val context: Context) {
     private val playlistDao = database.playlistDao()
 
     suspend fun scanDeviceMedia(forceRescan: Boolean = false) = withContext(Dispatchers.IO) {
-        // Purge any residual demo songs, videos, and playlists
-        songDao.deleteDemoSongs()
-        videoDao.deleteDemoVideos()
-        playlistDao.deleteDemoPlaylists()
+        val existingSongCount = songDao.getSongCount()
+        val existingVideoCount = videoDao.getVideoCount()
 
         val scannedSongs = mutableListOf<SongEntity>()
         val scannedVideos = mutableListOf<VideoEntity>()
 
         try {
-            // Scan Audio files from device MediaStore
+            // Scan Audio files
             val audioProjection = arrayOf(
                 MediaStore.Audio.Media._ID,
                 MediaStore.Audio.Media.TITLE,
@@ -88,18 +89,17 @@ class MediaScanner(private val context: Context) {
                             artist = if (artist.contains("<unknown>")) "Unknown Artist" else artist,
                             album = if (album.contains("<unknown>")) "Unknown Album" else album,
                             genre = "Music",
-                            durationMs = if (duration > 0) duration else 0L,
+                            durationMs = if (duration > 0) duration else 180000L,
                             uri = contentUri.toString(),
                             albumArtUri = albumArtUri,
                             folderName = folderName,
-                            dateAdded = dateAdded,
-                            isFavorite = false
+                            dateAdded = dateAdded
                         )
                     )
                 }
             }
 
-            // Scan Video files from device MediaStore
+            // Scan Video files
             val videoProjection = arrayOf(
                 MediaStore.Video.Media._ID,
                 MediaStore.Video.Media.TITLE,
@@ -144,19 +144,27 @@ class MediaScanner(private val context: Context) {
                         VideoEntity(
                             mediaId = mediaId.toString(),
                             title = title,
-                            durationMs = if (duration > 0) duration else 0L,
+                            durationMs = if (duration > 0) duration else 300000L,
                             uri = contentUri.toString(),
                             thumbnailUri = contentUri.toString(),
-                            resolution = "Video",
+                            resolution = "1080p",
                             sizeBytes = size,
-                            folderName = folderName,
-                            isFavorite = false
+                            folderName = folderName
                         )
                     )
                 }
             }
         } catch (e: Exception) {
             Log.e("MediaScanner", "Error querying MediaStore", e)
+        }
+
+        // Clean any residual demo songs, videos, and playlists
+        try {
+            songDao.deleteDemoSongs()
+            videoDao.deleteDemoVideos()
+            playlistDao.deleteDemoPlaylists()
+        } catch (e: Exception) {
+            Log.e("MediaScanner", "Error cleaning demo content", e)
         }
 
         if (scannedSongs.isNotEmpty()) {
@@ -167,16 +175,15 @@ class MediaScanner(private val context: Context) {
             videoDao.insertVideos(scannedVideos)
         }
 
-        // Initialize single default Smart Playlist "Liked Songs" if not present
-        ensureLikedSongsPlaylist()
+        seedDefaultPlaylists()
     }
 
-    private suspend fun ensureLikedSongsPlaylist() {
-        val existing = playlistDao.getAllPlaylists()
-        // If no smart playlist exists, create the Liked Songs smart playlist
+    private suspend fun seedDefaultPlaylists() {
+        val existingPlaylists = playlistDao.getAllPlaylists()
+        // Ensure Favorites smart playlist exists
         playlistDao.insertPlaylist(
             PlaylistEntity(
-                name = "Liked Songs",
+                name = "Favorites",
                 isSmart = true,
                 smartType = "FAVORITES",
                 coverArtUri = null
